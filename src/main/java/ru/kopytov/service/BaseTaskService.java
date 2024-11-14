@@ -15,5 +15,4 @@ public interface BaseTaskService {
     TaskDto updateTask(TaskDto taskDto);
 
     List<TaskDto> getAllTasks();
-
 }

@@ -2,6 +2,7 @@ package ru.kopytov.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.kopytov.aspect.HandlingResult;
 import ru.kopytov.dto.TaskDto;
 import ru.kopytov.dto.TaskMapper;
 import ru.kopytov.exception.NoEntityException;
@@ -44,6 +45,7 @@ public class TaskServiceImpl implements BaseTaskService {
     }
 
     @Override
+    @HandlingResult
     public List<TaskDto> getAllTasks() {
         return taskRepository.findAll()
                 .stream()
