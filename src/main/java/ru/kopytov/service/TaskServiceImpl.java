@@ -40,6 +40,7 @@ public class TaskServiceImpl implements BaseTaskService {
         Task savedTask = getTaskFromRepository(taskDto.getId());
         savedTask.setDescription(taskDto.getDescription());
         savedTask.setTitle(taskDto.getTitle());
+        savedTask.setStatus(taskDto.getStatus());
         TaskDto updatedTask = taskMapper.toDto(taskRepository.save(savedTask));
         return updatedTask;
     }
