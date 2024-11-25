@@ -1,9 +1,12 @@
 package ru.kopytov.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import ru.kopytov.aspect.LogController;
 import ru.kopytov.dto.TaskDto;
+import ru.kopytov.dto.TaskUpdateDtoKafka;
+import ru.kopytov.kafka.KafkaTaskProducer;
 import ru.kopytov.service.TaskServiceImpl;
 
 import java.util.List;
@@ -13,6 +16,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TaskController {
     private final TaskServiceImpl taskService;
+    private final KafkaTaskProducer kafkaTaskProducer;
+    @Value("${spring.kafka.topic}")
+    private String topic;
 
     @PostMapping
     @LogController
@@ -42,7 +48,10 @@ public class TaskController {
     @LogController
     public TaskDto updateTask(@RequestBody TaskDto task, @PathVariable("id") long id) {
         task.setId(id);
-        return taskService.updateTask(task);
+        TaskDto updateTask = taskService.updateTask(task);
+        TaskUpdateDtoKafka dto = new TaskUpdateDtoKafka(updateTask.getId(), updateTask.getStatus());
+        kafkaTaskProducer.send(topic, dto);
+        return updateTask;
     }
 
 }
