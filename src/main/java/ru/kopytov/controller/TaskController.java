@@ -43,6 +43,7 @@ public class TaskController {
     public TaskDto updateTask(@RequestBody TaskDto task, @PathVariable("id") long id) {
         task.setId(id);
         return taskService.updateTask(task);
+
     }
 
 }

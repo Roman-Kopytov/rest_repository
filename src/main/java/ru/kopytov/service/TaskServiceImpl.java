@@ -1,11 +1,14 @@
 package ru.kopytov.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.kopytov.aspect.HandlingResult;
 import ru.kopytov.dto.TaskDto;
 import ru.kopytov.dto.TaskMapper;
+import ru.kopytov.dto.TaskUpdateDtoKafka;
 import ru.kopytov.exception.NoEntityException;
+import ru.kopytov.kafka.KafkaTaskProducer;
 import ru.kopytov.model.Task;
 import ru.kopytov.repository.TaskRepository;
 
@@ -16,6 +19,9 @@ import java.util.List;
 public class TaskServiceImpl implements BaseTaskService {
     private final TaskRepository taskRepository;
     private final TaskMapper taskMapper;
+    private final KafkaTaskProducer kafkaTaskProducer;
+    @Value("${spring.kafka.topic}")
+    private String topic;
 
     @Override
     public TaskDto saveTask(TaskDto taskDto) {
@@ -40,7 +46,10 @@ public class TaskServiceImpl implements BaseTaskService {
         Task savedTask = getTaskFromRepository(taskDto.getId());
         savedTask.setDescription(taskDto.getDescription());
         savedTask.setTitle(taskDto.getTitle());
+        savedTask.setStatus(taskDto.getStatus());
         TaskDto updatedTask = taskMapper.toDto(taskRepository.save(savedTask));
+        TaskUpdateDtoKafka dto = new TaskUpdateDtoKafka(updatedTask.getId(), updatedTask.getStatus());
+        kafkaTaskProducer.send(topic, dto);
         return updatedTask;
     }
 
