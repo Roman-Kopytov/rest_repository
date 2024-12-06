@@ -3,6 +3,7 @@ package ru.kopytov.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.errors.SerializationException;
+import org.apache.kafka.common.header.Headers;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +22,16 @@ public class CustomDeserializer<T> extends JsonDeserializer<T> {
     public T deserialize(String topic, byte[] data) {
         try {
             return super.deserialize(topic, data);
+        } catch (Exception e) {
+            log.error("Error while deserializing message from topic {}: {}", topic, getMessage(data), e);
+            throw new SerializationException("Failed to deserialize message", e);
+        }
+    }
+
+    @Override
+    public T deserialize(String topic, Headers headers, byte[] data) {
+        try {
+            return super.deserialize(topic, headers, data);
         } catch (Exception e) {
             log.error("Error while deserializing message from topic {}: {}", topic, getMessage(data), e);
             throw new SerializationException("Failed to deserialize message", e);
