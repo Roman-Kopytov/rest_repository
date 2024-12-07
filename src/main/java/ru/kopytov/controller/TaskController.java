@@ -1,6 +1,7 @@
 package ru.kopytov.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.kopytov.aspect.LogController;
 import ru.kopytov.dto.TaskDto;
@@ -16,6 +17,7 @@ public class TaskController {
 
     @PostMapping
     @LogController
+    @PreAuthorize("hasRole('ADMIN')")
     public TaskDto saveTask(@RequestBody TaskDto task) {
         return taskService.saveTask(task);
     }
@@ -34,12 +36,14 @@ public class TaskController {
 
     @DeleteMapping("/{id}")
     @LogController
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteTask(@PathVariable("id") long id) {
         taskService.deleteTask(id);
     }
 
     @PutMapping("/{id}")
     @LogController
+    @PreAuthorize("hasRole('ADMIN')")
     public TaskDto updateTask(@RequestBody TaskDto task, @PathVariable("id") long id) {
         task.setId(id);
         return taskService.updateTask(task);

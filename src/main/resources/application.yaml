@@ -1,15 +1,25 @@
 spring:
+  application:
+    name: task_service
   datasource:
-    driver-class-name: org.h2.Driver
+    url: jdbc:postgresql://localhost:5434/tasks
     username: admin
     password: admin
-    url: jdbc:h2:mem:database
+    driverClassName: org.postgresql.Driver
+
+  security:
+    token: 3kjhjhgfl3hkjfjfj3jlk3rj423ljkjlkj32iodgi2ogef92fho23fhuslafhusahi
+    expiration: 544000
+
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
   kafka:
     topic: "task_updated"
     bootstrap-servers: "localhost:9092"
     group-id: "task"
     max-poll-records: 2
-
-
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
