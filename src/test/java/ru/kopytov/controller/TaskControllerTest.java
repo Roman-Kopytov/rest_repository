@@ -1,17 +1,21 @@
 package ru.kopytov.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 import ru.kopytov.dto.TaskDto;
 import ru.kopytov.dto.TaskMapper;
+import ru.kopytov.kafka.KafkaTaskProducer;
 import ru.kopytov.model.Task;
 import ru.kopytov.model.TaskStatus;
 import ru.kopytov.repository.TaskRepository;
@@ -22,6 +26,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,7 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 class TaskControllerTest extends AbstractContainerBaseTest {
-
+    @MockBean(name = "kafkaTaskProducer")
+    private KafkaTaskProducer kafkaTaskProducer;
     @Autowired
     private MockMvc mockMvc;
 
@@ -40,6 +47,8 @@ class TaskControllerTest extends AbstractContainerBaseTest {
     private TaskRepository taskRepository;
     @Autowired
     private TaskMapper taskMapper;
+    private static boolean isUserRegistered = false;
+
 
     @Autowired
     private EntityManager entityManager;
@@ -48,12 +57,15 @@ class TaskControllerTest extends AbstractContainerBaseTest {
     private Task task1;
     private Task task2;
     private Task task3;
+    private String token;
 
     @BeforeEach
     @Transactional
-    void setUp() {
+    void setUp() throws Exception {
         taskRepository.truncateTable();
         taskDtos = generateTask();
+        registerAdminUser();
+        token = getToken();
     }
 
 
@@ -102,6 +114,7 @@ class TaskControllerTest extends AbstractContainerBaseTest {
 
         mockMvc.perform(post("/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + token)
                         .content(mapper.writeValueAsString(taskDto)))
                 .andExpect(status().isOk())
                 .andExpect(content().json(mapper.writeValueAsString(responseTask)));
@@ -124,16 +137,52 @@ class TaskControllerTest extends AbstractContainerBaseTest {
 
     @Test
     void shouldDeleteTask() throws Exception {
-        mockMvc.perform(delete("/tasks/1"))
+        mockMvc.perform(delete("/tasks/1")
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
-
         List<Task> all = taskRepository.findAll();
-        assertEquals(taskDtos.size()-1, all.size());
+        assertEquals(taskDtos.size() - 1, all.size());
         assertEquals(List.of(task2, task3).toString(), all.toString());
+    }
+
+    private String getToken() throws Exception {
+        String authJson = """
+                {
+                    "username": "Test",
+                    "password": "1111"
+                }
+                """;
+        MvcResult authResult = mockMvc.perform(post("/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(authJson))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String token = JsonPath.parse(authResult.getResponse().getContentAsString()).read("$.jwt");
+        return token;
+    }
+
+    private void registerAdminUser() throws Exception {
+        if (!isUserRegistered) {
+            String adminJson = """
+                    {
+                        "username": "Test",
+                        "email": "test@yandex.ru",
+                        "role": ["admin"],
+                        "password": "1111"
+                    }
+                    """;
+            mockMvc.perform(post("/auth/signup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(adminJson))
+                    .andExpect(status().isOk());
+            isUserRegistered = true;
+        }
     }
 
     @Test
     void shouldReturnUpdatedTask() throws Exception {
+        doNothing().when(kafkaTaskProducer).send(any(),any());
         TaskDto responseTask = new TaskDto();
         responseTask.setId(1L);
         responseTask.setUserId(1L);
@@ -143,6 +192,7 @@ class TaskControllerTest extends AbstractContainerBaseTest {
 
         mockMvc.perform(put("/tasks/1")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer " + token)
                         .content(mapper.writeValueAsString(responseTask)))
                 .andExpect(status().isOk())
                 .andExpect(content().json(mapper.writeValueAsString(responseTask)));

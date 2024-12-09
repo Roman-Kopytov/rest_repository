@@ -17,14 +17,14 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/singin")
+    @PostMapping("/signin")
     public ResponseEntity<?> singin(@RequestBody LoginRequest loginRequest) {
         ResponseEntity<?> responseEntity = authService.authenticateUser(loginRequest);
         return responseEntity;
     }
 
 
-    @PostMapping("/singup")
+    @PostMapping("/signup")
     public ResponseEntity<?> singup(@RequestBody SingupRequest singupRequest) {
         ResponseEntity<?> responseEntity = authService.registerUser(singupRequest);
         return responseEntity;

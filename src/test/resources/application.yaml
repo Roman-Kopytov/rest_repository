@@ -6,9 +6,14 @@ spring:
     driverClassName: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: create-drop
-
+  security:
+    token: 3kjhjhgfl3hkjfjfj3jlk3rj423ljkjlkj32iodgi2ogef92fho23fhuslafhusahi
+    expiration: 544000
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
   kafka:
     topic: "task_updated"
     bootstrap-servers: "localhost:9092"
